@@ -15,6 +15,7 @@ fi
 
 # Extract configuration values
 export OLLAMA_HOST=$(jq -r '.ollama_host // "http://localhost:11434"' $CONFIG_PATH)
+export LLM_PROVIDER=$(jq -r '.llm_provider // "ollama"' $CONFIG_PATH)
 export DRY_RUN_MODE=$(jq -r '.dry_run_mode // true' $CONFIG_PATH)
 export LOG_LEVEL=$(jq -r '.log_level // "info"' $CONFIG_PATH | tr '[:lower:]' '[:upper:]')
 export ORCHESTRATOR_MODEL=$(jq -r '.orchestrator_model // "deepseek-r1:8b"' $CONFIG_PATH)
@@ -62,8 +63,8 @@ else
     echo "  HA Access Token: NOT PROVIDED (Using Supervisor Token fallback)"
 fi
 
-# Start Ollama server if using localhost
-if [[ "$OLLAMA_HOST" == *"localhost"* ]] || [[ "$OLLAMA_HOST" == *"127.0.0.1"* ]]; then
+# Start Ollama server if provider is ollama and using localhost
+if [[ "$LLM_PROVIDER" == "ollama" ]] && ([[ "$OLLAMA_HOST" == *"localhost"* ]] || [[ "$OLLAMA_HOST" == *"127.0.0.1"* ]]); then
     echo "=========================================="
     echo "Starting Ollama server..."
     echo "=========================================="
