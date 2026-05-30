@@ -44,7 +44,15 @@ class Orchestrator:
         ollama_host: str = "http://localhost:11434",
         gemini_api_key: Optional[str] = None,
         use_gemini_for_dashboard: bool = False,
-        gemini_model_name: str = "gemini-1.5-pro"
+        gemini_model_name: str = "gemini-1.5-pro",
+        provider: Optional[str] = None,
+        openai_api_key: Optional[str] = None,
+        openai_base_url: Optional[str] = None,
+        github_token: Optional[str] = None,
+        foundry_endpoint: Optional[str] = None,
+        foundry_api_key: Optional[str] = None,
+        foundry_bearer_token: Optional[str] = None,
+        foundry_api_version: Optional[str] = None,
     ):
         """
         Initialize orchestrator.
@@ -84,7 +92,17 @@ class Orchestrator:
         self.ollama_client = ollama.Client(host=ollama_host)
         self.llm_client = self.ollama_client # Reference for other methods
         self.ollama_host_used = ollama_host
-        self.llm_provider = make_chat_provider(ollama_host=ollama_host)
+        self.llm_provider = make_chat_provider(
+            provider=provider,
+            ollama_host=ollama_host,
+            openai_api_key=openai_api_key,
+            openai_base_url=openai_base_url,
+            github_token=github_token,
+            foundry_endpoint=foundry_endpoint,
+            foundry_api_key=foundry_api_key,
+            foundry_bearer_token=foundry_bearer_token,
+            foundry_api_version=foundry_api_version,
+        )
 
         # Task and progress tracking (bounded to prevent memory leaks)
         self.task_ledger: collections.deque = collections.deque(maxlen=500)

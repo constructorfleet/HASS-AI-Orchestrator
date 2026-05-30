@@ -1,0 +1,81 @@
+name: Quality Gates
+
+on:
+  pull_request:
+    paths:
+      - "ai-orchestrator/**"
+      - ".github/workflows/ci.yml"
+      - ".github/workflows/publish-docker.yml"
+      - "repository.yaml"
+  push:
+    branches:
+      - main
+    paths:
+      - "ai-orchestrator/**"
+      - ".github/workflows/ci.yml"
+      - ".github/workflows/publish-docker.yml"
+      - "repository.yaml"
+
+permissions:
+  contents: read
+
+jobs:
+  backend-tests:
+    name: Backend smoke tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai-orchestrator/backend
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: ai-orchestrator/backend/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pytest pytest-asyncio
+
+      - name: Run smoke tests
+        run: pytest -m smoke
+
+  dashboard-build:
+    name: Dashboard build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai-orchestrator/dashboard
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: ai-orchestrator/dashboard/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build dashboard
+        run: npm run build
+
+  addon-checks:
+    name: Home Assistant add-on checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run add-on checks
+        uses: home-assistant/add-on-checks@v5
+        with:
+          project_path: ./ai-orchestrator

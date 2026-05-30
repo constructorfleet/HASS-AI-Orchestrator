@@ -31,7 +31,16 @@ class BaseAgent(ABC):
         rag_manager: Optional[Any] = None,
         model_name: str = "mistral:7b-instruct",
         decision_interval: int = 120,
-        broadcast_func: Optional[Any] = None
+        broadcast_func: Optional[Any] = None,
+        provider: Optional[str] = None,
+        ollama_host: Optional[str] = None,
+        openai_api_key: Optional[str] = None,
+        openai_base_url: Optional[str] = None,
+        github_token: Optional[str] = None,
+        foundry_endpoint: Optional[str] = None,
+        foundry_api_key: Optional[str] = None,
+        foundry_bearer_token: Optional[str] = None,
+        foundry_api_version: Optional[str] = None,
     ):
         """
         Initialize base agent.
@@ -68,9 +77,19 @@ class BaseAgent(ABC):
         
         # Ollama client (legacy attribute kept for back-compat) plus the
         # provider-aware chat façade introduced in Phase 9.
-        ollama_host = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+        ollama_host = ollama_host or os.getenv("OLLAMA_HOST", "http://localhost:11434")
         self.ollama_client = ollama.Client(host=ollama_host)
-        self.llm_provider = make_chat_provider(ollama_host=ollama_host)
+        self.llm_provider = make_chat_provider(
+            provider=provider,
+            ollama_host=ollama_host,
+            openai_api_key=openai_api_key,
+            openai_base_url=openai_base_url,
+            github_token=github_token,
+            foundry_endpoint=foundry_endpoint,
+            foundry_api_key=foundry_api_key,
+            foundry_bearer_token=foundry_bearer_token,
+            foundry_api_version=foundry_api_version,
+        )
         
         # Decision storage
         self.decision_dir = Path("/data/decisions") / agent_id

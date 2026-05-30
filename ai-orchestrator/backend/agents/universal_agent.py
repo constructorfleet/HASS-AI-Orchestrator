@@ -26,7 +26,16 @@ class UniversalAgent(BaseAgent):
         model_name: str = "mistral:7b-instruct",
         decision_interval: int = 120,
         broadcast_func: Optional[Any] = None,
-        knowledge: str = ""
+        knowledge: str = "",
+        provider: Optional[str] = None,
+        ollama_host: Optional[str] = None,
+        openai_api_key: Optional[str] = None,
+        openai_base_url: Optional[str] = None,
+        github_token: Optional[str] = None,
+        foundry_endpoint: Optional[str] = None,
+        foundry_api_key: Optional[str] = None,
+        foundry_bearer_token: Optional[str] = None,
+        foundry_api_version: Optional[str] = None,
     ):
         # Universal agents don't use a fixed skills_path
         # We pass a dummy path or None, and override _load_skills
@@ -39,7 +48,16 @@ class UniversalAgent(BaseAgent):
             rag_manager=rag_manager,
             model_name=model_name,
             decision_interval=decision_interval,
-            broadcast_func=broadcast_func
+            broadcast_func=broadcast_func,
+            provider=provider,
+            ollama_host=ollama_host,
+            openai_api_key=openai_api_key,
+            openai_base_url=openai_base_url,
+            github_token=github_token,
+            foundry_endpoint=foundry_endpoint,
+            foundry_api_key=foundry_api_key,
+            foundry_bearer_token=foundry_bearer_token,
+            foundry_api_version=foundry_api_version,
         )
         self.instruction = instruction
         self.entities = entities
@@ -334,4 +352,3 @@ Each action MUST have a 'tool' field (e.g. "set_temperature") and 'parameters'.
                 "reasoning": f"Failed to parse LLM response: {e}. Raw response logged.",
                 "actions": []
             }
-

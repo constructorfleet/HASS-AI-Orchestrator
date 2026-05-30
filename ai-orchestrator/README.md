@@ -65,17 +65,14 @@ The system now features a real-time, LLM-driven visualization engine that builds
 1.  **Add Repository**: Add this repo URL to your Home Assistant Add-on Store.
 2.  **Install**: Find "AI Orchestrator" and click Install.
 3.  **Configure**:
-    *   **Ollama Models**: Pull the required models on your Ollama server:
+    *   **Local Runtime**: Set `ollama_host` to your Ollama endpoint (default: `http://localhost:11434`) and pull the required models on that server:
         ```bash
         ollama pull deepseek-r1:8b
         ollama pull mistral:7b-instruct
         ollama pull nomic-embed-text
         ```
-    *   **Ollama Host**: URL of your Ollama instance (default: `http://localhost:11434`).
-    *   **Orchestrator Model**: The main brain for high-level planning (default: `deepseek-r1:8b`).
-    *   **Smart Model**: The reasoning model for complex agents (default: `deepseek-r1:8b`).
-    *   **Fast Model**: The execution model for responsive agents (default: `mistral:7b-instruct`).
-    *   **Cloud AI API Key**: (Optional) Add your Google AI API key for high-fidelity "AI Visual Dashboard" generation.
+    *   **Use-Case Models**: Tune `orchestrator_model`, `smart_model`, `fast_model`, and `deep_reasoning_model` for the planning, specialist, and reasoning paths.
+    *   **Dashboard Generation**: Optionally set `gemini_api_key`, `use_gemini_for_dashboard`, and `gemini_model_name` for AI Visual Dashboard generation.
     *   **LLM Provider** (v0.10.0+, optional): Switch every agent and the orchestrator over to a remote provider by setting `llm_provider` to one of:
         *   `ollama` *(default — local, private, free)*
         *   `openai` — set `openai_api_key` (and optionally `openai_base_url` for any OpenAI-compatible endpoint) and `openai_model` (e.g. `gpt-4o-mini`).
