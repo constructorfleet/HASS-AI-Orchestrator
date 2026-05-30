@@ -174,8 +174,10 @@ class DeepReasoningAgent:
         self._run_to_episode: Dict[str, str] = {}
 
         # Decision log directory
-        base = Path("/data/decisions") if os.path.exists("/data") else Path(__file__).parent.parent.parent / "data" / "decisions"
-        self.log_dir = base / "deep_reasoner"
+        data_base = Path(os.environ.get("DATA_DIR", "/data"))
+        if not data_base.exists() or not os.access(str(data_base), os.W_OK):
+            data_base = Path(__file__).parent.parent.parent / "data"
+        self.log_dir = data_base / "decisions" / "deep_reasoner"
         self.log_dir.mkdir(parents=True, exist_ok=True)
 
         # Provider precedence:

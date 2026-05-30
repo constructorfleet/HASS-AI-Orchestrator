@@ -248,6 +248,14 @@ class DashboardStudio:
         chat_provider_factory: Callable[..., ChatProvider] = make_chat_provider,
         default_provider: Optional[str] = None,
         default_model: Optional[str] = None,
+        ollama_host: Optional[str] = None,
+        openai_api_key: Optional[str] = None,
+        openai_base_url: Optional[str] = None,
+        github_token: Optional[str] = None,
+        foundry_endpoint: Optional[str] = None,
+        foundry_api_key: Optional[str] = None,
+        foundry_bearer_token: Optional[str] = None,
+        foundry_api_version: Optional[str] = None,
     ) -> None:
         self._ha_provider = ha_client_provider
         self.store_dir = Path(store_dir)
@@ -255,6 +263,16 @@ class DashboardStudio:
         self._chat_provider_factory = chat_provider_factory
         self._default_provider = default_provider
         self._default_model = default_model
+        self._provider_kwargs = {
+            "ollama_host": ollama_host,
+            "openai_api_key": openai_api_key,
+            "openai_base_url": openai_base_url,
+            "github_token": github_token,
+            "foundry_endpoint": foundry_endpoint,
+            "foundry_api_key": foundry_api_key,
+            "foundry_bearer_token": foundry_bearer_token,
+            "foundry_api_version": foundry_api_version,
+        }
 
     # ------------------------------------------------------------------
     # Provider/model resolution
@@ -419,7 +437,7 @@ class DashboardStudio:
     ) -> DashboardMeta:
         """Run a single generation and persist it."""
         provider_name = resolve_provider_name(provider or self._default_provider)
-        chat = self._chat_provider_factory(provider=provider_name)
+        chat = self._chat_provider_factory(provider=provider_name, **self._provider_kwargs)
         model_name = self._resolve_model(provider_name, model)
 
         context = await self.gather_context()

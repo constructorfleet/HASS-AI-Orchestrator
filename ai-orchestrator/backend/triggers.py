@@ -239,9 +239,12 @@ class TriggerStore:
 
     def __init__(self, db_path: Optional[str] = None) -> None:
         if db_path is None:
-            base = Path("/data") if Path("/data").exists() else Path(__file__).parent.parent / "data"
-            base.mkdir(parents=True, exist_ok=True)
-            db_path = str(base / "triggers.db")
+            import os
+            data_base = Path(os.environ.get("DATA_DIR", "/data"))
+            if not data_base.exists() or not os.access(str(data_base), os.W_OK):
+                data_base = Path(__file__).parent.parent / "data"
+            data_base.mkdir(parents=True, exist_ok=True)
+            db_path = str(data_base / "triggers.db")
         self.db_path = db_path
         Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         with self._conn() as c:

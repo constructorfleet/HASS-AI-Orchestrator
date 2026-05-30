@@ -44,7 +44,15 @@ class Orchestrator:
         ollama_host: str = "http://localhost:11434",
         gemini_api_key: Optional[str] = None,
         use_gemini_for_dashboard: bool = False,
-        gemini_model_name: str = "gemini-1.5-pro"
+        gemini_model_name: str = "gemini-1.5-pro",
+        provider: Optional[str] = None,
+        openai_api_key: Optional[str] = None,
+        openai_base_url: Optional[str] = None,
+        github_token: Optional[str] = None,
+        foundry_endpoint: Optional[str] = None,
+        foundry_api_key: Optional[str] = None,
+        foundry_bearer_token: Optional[str] = None,
+        foundry_api_version: Optional[str] = None,
     ):
         """
         Initialize orchestrator.
@@ -84,7 +92,17 @@ class Orchestrator:
         self.ollama_client = ollama.Client(host=ollama_host)
         self.llm_client = self.ollama_client # Reference for other methods
         self.ollama_host_used = ollama_host
-        self.llm_provider = make_chat_provider(ollama_host=ollama_host)
+        self.llm_provider = make_chat_provider(
+            provider=provider,
+            ollama_host=ollama_host,
+            openai_api_key=openai_api_key,
+            openai_base_url=openai_base_url,
+            github_token=github_token,
+            foundry_endpoint=foundry_endpoint,
+            foundry_api_key=foundry_api_key,
+            foundry_bearer_token=foundry_bearer_token,
+            foundry_api_version=foundry_api_version,
+        )
 
         # Task and progress tracking (bounded to prevent memory leaks)
         self.task_ledger: collections.deque = collections.deque(maxlen=500)
@@ -94,20 +112,13 @@ class Orchestrator:
         self.conflict_rules = self._load_conflict_rules()
         
         # Dashboard and logging
-        self.decision_log_dir = Path("/data/decisions/orchestrator")
-        if not os.access("/", os.W_OK) and not self.decision_log_dir.exists():
-             self.decision_log_dir = Path(__file__).parent.parent / "data" / "decisions" / "orchestrator"
+        data_base = Path(os.environ.get("DATA_DIR", "/data"))
+        if not data_base.exists() or not os.access(str(data_base), os.W_OK):
+            data_base = Path(__file__).parent.parent / "data"
+        self.decision_log_dir = data_base / "decisions" / "orchestrator"
         self.decision_log_dir.mkdir(parents=True, exist_ok=True)
         
-        self.dashboard_dir = Path("/data/dashboard")
-        # Check if we are in a HA Add-on environment (which has /data)
-        # On Windows, Path("/") resolves to C:\ which might exist but we want to stay in workspace for local dev
-        is_addon = os.path.exists("/data") and os.access("/data", os.W_OK)
-        
-        if not is_addon:
-             # Fallback to workspace-local data directory
-             self.dashboard_dir = Path(__file__).parent.parent / "data" / "dashboard"
-        
+        self.dashboard_dir = data_base / "dashboard"
         self.dashboard_dir.mkdir(parents=True, exist_ok=True)
         
         # Gemini setup (optional)
