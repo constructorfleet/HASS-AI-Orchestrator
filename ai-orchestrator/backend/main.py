@@ -111,6 +111,7 @@ from native_prompts import NativePromptLibrary
 from plan_executor import PlanStore
 from triggers import TriggerRegistry, TriggerSpec, TriggerStore, CronExpr
 from dashboard_studio import DashboardStudio, DashboardMeta
+from agent_bus import AgentBus
 import yaml
 
 import logging
@@ -170,6 +171,7 @@ deep_reasoner: Optional[DeepReasoningAgent] = None
 trigger_registry: Optional[TriggerRegistry] = None
 native_prompts: Optional[NativePromptLibrary] = None
 dashboard_studio: Optional[DashboardStudio] = None
+agent_bus: Optional[AgentBus] = None
 agents: Dict[str, object] = {}
 dashboard_clients: List[WebSocket] = []
 
@@ -451,6 +453,11 @@ async def lifespan(app: FastAPI):
         raw = os.getenv(env_var, "")
         return [e.strip() for e in raw.split(",") if e.strip()]
 
+    # 5.0 Initialize agent message bus (pub/sub between agents)
+    global agent_bus
+    agent_bus = AgentBus()
+    print("✓ AgentBus initialized")
+
     # 5. Initialize Agents (Phase 5: Dynamic Loading)
     def get_agents_config_path():
         # Search priority: /config/agents.yaml (Persistent) -> local agents.yaml
@@ -502,6 +509,10 @@ async def lifespan(app: FastAPI):
                     decision_interval=decision_interval,
                     broadcast_func=broadcast_to_dashboard,
                     knowledge=agent_cfg.get('knowledge', ""),
+                    schedule=agent_cfg.get('schedule'),
+                    agent_bus=agent_bus,
+                    publishes=agent_cfg.get('publishes', []),
+                    listens_to=agent_cfg.get('listens_to', []),
                     provider=llm_provider or None,
                     ollama_host=ollama_host_opt,
                     openai_api_key=openai_api_key or None,

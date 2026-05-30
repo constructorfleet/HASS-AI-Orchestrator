@@ -1,0 +1,44 @@
+{
+  "timestamp": "2026-05-30T17:43:12.594719",
+  "agent_id": "deep_reasoner",
+  "run_id": "d014f8806bc74ddeaca5961005e0afa1",
+  "goal": "Turn on the light",
+  "answer": "Done",
+  "iterations": 2,
+  "tool_calls": 1,
+  "stopped_reason": "final",
+  "duration_ms": 0,
+  "trace": [
+    {
+      "iteration": 1,
+      "thought": "acting",
+      "tool_calls": [
+        {
+          "id": "c1",
+          "name": "turn_on_light",
+          "arguments": {
+            "entity_id": "light.kitchen"
+          }
+        }
+      ],
+      "tool_results": [
+        {
+          "id": "c1",
+          "name": "turn_on_light",
+          "result": {
+            "ok": true,
+            "executed": true
+          }
+        }
+      ],
+      "duration_ms": 0
+    },
+    {
+      "iteration": 2,
+      "thought": "Done",
+      "tool_calls": [],
+      "tool_results": [],
+      "duration_ms": 0
+    }
+  ]
+}

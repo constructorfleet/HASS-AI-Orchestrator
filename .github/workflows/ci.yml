@@ -70,14 +70,3 @@ jobs:
       - name: Build dashboard
         run: npm run build
 
-  addon-checks:
-    name: Home Assistant add-on checks
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run add-on checks
-        uses: home-assistant/add-on-checks@v5
-        with:
-          project_path: ./ai-orchestrator

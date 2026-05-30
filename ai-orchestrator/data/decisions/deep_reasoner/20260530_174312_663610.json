@@ -1,0 +1,20 @@
+{
+  "timestamp": "2026-05-30T17:43:12.663621",
+  "agent_id": "deep_reasoner",
+  "run_id": "948f754defe34f21a404403901919768",
+  "goal": "noop",
+  "answer": "done",
+  "iterations": 1,
+  "tool_calls": 0,
+  "stopped_reason": "final",
+  "duration_ms": 0,
+  "trace": [
+    {
+      "iteration": 1,
+      "thought": "done",
+      "tool_calls": [],
+      "tool_results": [],
+      "duration_ms": 0
+    }
+  ]
+}

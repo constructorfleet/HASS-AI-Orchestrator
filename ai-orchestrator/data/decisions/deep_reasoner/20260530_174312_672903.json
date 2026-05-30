@@ -1,0 +1,20 @@
+{
+  "timestamp": "2026-05-30T17:43:12.672913",
+  "agent_id": "deep_reasoner",
+  "run_id": "e891846b3c754b1c9702615cf2622f97",
+  "goal": "ping",
+  "answer": "hi",
+  "iterations": 1,
+  "tool_calls": 0,
+  "stopped_reason": "final",
+  "duration_ms": 0,
+  "trace": [
+    {
+      "iteration": 1,
+      "thought": "hi",
+      "tool_calls": [],
+      "tool_results": [],
+      "duration_ms": 0
+    }
+  ]
+}

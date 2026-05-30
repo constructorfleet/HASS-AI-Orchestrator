@@ -1,0 +1,20 @@
+{
+  "timestamp": "2026-05-30T17:43:12.683274",
+  "agent_id": "deep_reasoner",
+  "run_id": "cae91a56ad6940739179f2cdaf60e93f",
+  "goal": "Audit the home security posture.",
+  "answer": "audit complete",
+  "iterations": 1,
+  "tool_calls": 0,
+  "stopped_reason": "final",
+  "duration_ms": 0,
+  "trace": [
+    {
+      "iteration": 1,
+      "thought": "audit complete",
+      "tool_calls": [],
+      "tool_results": [],
+      "duration_ms": 0
+    }
+  ]
+}
