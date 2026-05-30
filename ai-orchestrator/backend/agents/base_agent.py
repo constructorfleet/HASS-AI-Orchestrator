@@ -554,7 +554,7 @@ If no action is needed, return an empty actions array.
             task.cancel()
             try:
                 await task
-            except asyncio.CancelledError:
+            except (asyncio.CancelledError, Exception):
                 pass
 
         # If a bus message arrived, put it back so the next loop iteration
