@@ -47,7 +47,7 @@
         },
         "gemini": {
             "api_key": "",
-            "model": "gemini-robotics-er-1.5-preview",
+            "model": "gemini-1.5-pro",
             "use_for_dashboard": false
         },
         "github": {
