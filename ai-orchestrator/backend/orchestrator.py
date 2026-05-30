@@ -112,20 +112,13 @@ class Orchestrator:
         self.conflict_rules = self._load_conflict_rules()
         
         # Dashboard and logging
-        self.decision_log_dir = Path("/data/decisions/orchestrator")
-        if not os.access("/", os.W_OK) and not self.decision_log_dir.exists():
-             self.decision_log_dir = Path(__file__).parent.parent / "data" / "decisions" / "orchestrator"
+        data_base = Path(os.environ.get("DATA_DIR", "/data"))
+        if not data_base.exists() or not os.access(str(data_base), os.W_OK):
+            data_base = Path(__file__).parent.parent / "data"
+        self.decision_log_dir = data_base / "decisions" / "orchestrator"
         self.decision_log_dir.mkdir(parents=True, exist_ok=True)
         
-        self.dashboard_dir = Path("/data/dashboard")
-        # Check if we are in a HA Add-on environment (which has /data)
-        # On Windows, Path("/") resolves to C:\ which might exist but we want to stay in workspace for local dev
-        is_addon = os.path.exists("/data") and os.access("/data", os.W_OK)
-        
-        if not is_addon:
-             # Fallback to workspace-local data directory
-             self.dashboard_dir = Path(__file__).parent.parent / "data" / "dashboard"
-        
+        self.dashboard_dir = data_base / "dashboard"
         self.dashboard_dir.mkdir(parents=True, exist_ok=True)
         
         # Gemini setup (optional)

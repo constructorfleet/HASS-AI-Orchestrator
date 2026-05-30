@@ -92,7 +92,10 @@ class BaseAgent(ABC):
         )
         
         # Decision storage
-        self.decision_dir = Path("/data/decisions") / agent_id
+        data_base = Path(os.environ.get("DATA_DIR", "/data"))
+        if not data_base.exists() or not os.access(str(data_base), os.W_OK):
+            data_base = Path(__file__).parent.parent.parent / "data"
+        self.decision_dir = data_base / "decisions" / agent_id
         self.decision_dir.mkdir(parents=True, exist_ok=True)
     
     def load_skills(self) -> Dict:

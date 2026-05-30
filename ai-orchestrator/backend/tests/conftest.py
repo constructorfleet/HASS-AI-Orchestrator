@@ -84,19 +84,13 @@ def mock_ollama_client():
 
 
 @pytest.fixture
-def temp_data_dir(tmp_path):
-    """Create temporary data directory for tests"""
+def temp_data_dir(tmp_path, monkeypatch):
+    """Create temporary data directory for tests and redirect DATA_DIR to it"""
     data_dir = tmp_path / "data"
     data_dir.mkdir()
     decisions_dir = data_dir / "decisions" / "heating"
     decisions_dir.mkdir(parents=True)
-    
-    # Monkey-patch Path to use temp directory
-    original_path = Path
-    
-    def mock_path(path_str):
-        if str(path_str).startswith("/data"):
-            return original_path(str(path_str).replace("/data", str(data_dir)))
-        return original_path(path_str)
-    
+
+    monkeypatch.setenv("DATA_DIR", str(data_dir))
+
     return data_dir

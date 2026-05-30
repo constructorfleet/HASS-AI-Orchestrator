@@ -15,7 +15,8 @@ from fastapi import APIRouter, HTTPException
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/stats", tags=["analytics"])
 
-DECISION_DIR = Path("/data/decisions")
+_data_base = Path(os.environ.get("DATA_DIR", "/data"))
+DECISION_DIR = _data_base / "decisions"
 
 class AnalyticsService:
     """Service to aggregate and analyze agent decision logs"""

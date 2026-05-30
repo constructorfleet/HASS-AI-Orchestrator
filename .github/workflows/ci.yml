@@ -43,6 +43,8 @@ jobs:
           python -m pip install -r requirements.txt pytest pytest-asyncio
 
       - name: Run smoke tests
+        env:
+          DATA_DIR: /tmp/hass-ai-test-data
         run: pytest -m smoke
 
   dashboard-build:

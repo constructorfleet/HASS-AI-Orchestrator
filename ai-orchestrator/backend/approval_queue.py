@@ -4,6 +4,7 @@ Manages high-impact actions requiring manual approval.
 """
 import asyncio
 import logging
+import os
 import sqlite3
 import json
 from datetime import datetime, timedelta
@@ -45,14 +46,19 @@ class ApprovalQueue:
     Handles auto-approval rules, timeouts, and manual approvals.
     """
     
-    def __init__(self, db_path: str = "/data/approvals.db", timeout_default: int = 300):
+    def __init__(self, db_path: Optional[str] = None, timeout_default: int = 300):
         """
         Initialize approval queue.
         
         Args:
-            db_path: Path to SQLite database
+            db_path: Path to SQLite database (defaults to DATA_DIR/approvals.db)
             timeout_default: Default timeout in seconds (5 minutes)
         """
+        if db_path is None:
+            data_base = Path(os.environ.get("DATA_DIR", "/data"))
+            if not data_base.exists() or not os.access(str(data_base), os.W_OK):
+                data_base = Path(__file__).parent.parent / "data"
+            db_path = str(data_base / "approvals.db")
         self.db_path = db_path
         self.timeout_default = timeout_default
         self._init_database()

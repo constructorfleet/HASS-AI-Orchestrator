@@ -374,7 +374,8 @@ async def lifespan(app: FastAPI):
     enable_rag = os.getenv("ENABLE_RAG", "true").lower() == "true"
     if enable_rag:
         try:
-            rag_manager = RagManager(persist_dir="/data/chroma", disable_telemetry=disable_telemetry)
+            data_base = Path(os.getenv("DATA_DIR", "/data"))
+            rag_manager = RagManager(persist_dir=str(data_base / "chroma"), disable_telemetry=disable_telemetry)
             # FIX: Pass lambda to resolve the global ha_client at runtime, not now (which is None)
             knowledge_base = KnowledgeBase(rag_manager, lambda: ha_client)
             print("✓ RAG Manager & Knowledge Base initialized")
@@ -392,7 +393,8 @@ async def lifespan(app: FastAPI):
     print(f"✓ MCP Server initialized (dry_run={dry_run})")
     
     # 4. Initialize Approval Queue
-    approval_queue = ApprovalQueue(db_path="/data/approvals.db")
+    _data_base = Path(os.getenv("DATA_DIR", "/data"))
+    approval_queue = ApprovalQueue(db_path=str(_data_base / "approvals.db"))
     # Register callback for dashboard notifications
     approval_queue.register_callback(broadcast_approval_request)
     print("✓ Approval Queue initialized")
@@ -1285,7 +1287,8 @@ async def get_agents():
 @app.get("/api/decisions")
 async def get_decisions(limit: int = 100, agent_id: Optional[str] = None):
     """Get recent decision history (aggregated or per agent)"""
-    base_dir = Path("/data/decisions")
+    data_base = Path(os.getenv("DATA_DIR", "/data"))
+    base_dir = data_base / "decisions"
     all_files = []
     
     # If agent_id specified, look there. Else look in all subdirs (including orchestrator)
