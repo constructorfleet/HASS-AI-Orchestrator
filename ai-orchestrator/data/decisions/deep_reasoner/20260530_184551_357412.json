@@ -1,0 +1,12 @@
+{
+  "timestamp": "2026-05-30T18:45:51.357422",
+  "agent_id": "deep_reasoner",
+  "run_id": "ee47128de56a47fab809468ede9a5e11",
+  "goal": "fail",
+  "answer": "LLM error: kaboom",
+  "iterations": 0,
+  "tool_calls": 0,
+  "stopped_reason": "llm_error",
+  "duration_ms": 0,
+  "trace": []
+}

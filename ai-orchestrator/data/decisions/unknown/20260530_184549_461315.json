@@ -1,0 +1,25 @@
+{
+  "timestamp": "2026-05-30T18:45:49.461241",
+  "agent_id": "unknown",
+  "tool": "call_ha_service",
+  "parameters": {
+    "domain": "light",
+    "service": "turn_on",
+    "entity_id": "light.living_room",
+    "service_data": {
+      "brightness_pct": 50
+    }
+  },
+  "dry_run": false,
+  "result": {
+    "action": "call_ha_service",
+    "domain": "light",
+    "service": "turn_on",
+    "data": {
+      "entity_id": "light.living_room",
+      "brightness_pct": 50
+    },
+    "executed": true
+  },
+  "status": "success"
+}

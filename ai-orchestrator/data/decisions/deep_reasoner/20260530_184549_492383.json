@@ -1,0 +1,20 @@
+{
+  "timestamp": "2026-05-30T18:45:49.492392",
+  "agent_id": "deep_reasoner",
+  "run_id": "35d26ebb72684dc9849f17fb5f00b0df",
+  "goal": "Investigate kitchen lights coming on overnight",
+  "answer": "ack",
+  "iterations": 1,
+  "tool_calls": 0,
+  "stopped_reason": "final",
+  "duration_ms": 0,
+  "trace": [
+    {
+      "iteration": 1,
+      "thought": "ack",
+      "tool_calls": [],
+      "tool_results": [],
+      "duration_ms": 0
+    }
+  ]
+}

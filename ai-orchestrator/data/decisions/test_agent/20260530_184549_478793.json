@@ -1,0 +1,16 @@
+{
+  "timestamp": "2026-05-30T18:45:49.478708",
+  "agent_id": "test_agent",
+  "tool": "set_temperature",
+  "parameters": {
+    "entity_id": "climate.test",
+    "temperature": 25.0
+  },
+  "dry_run": false,
+  "result": {
+    "error": "Temperature change too large: 5.0\u00b0C (max 3.0\u00b0C per decision)",
+    "current": 20.0,
+    "requested": 25.0
+  },
+  "status": "success"
+}

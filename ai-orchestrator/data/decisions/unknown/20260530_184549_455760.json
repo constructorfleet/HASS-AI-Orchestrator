@@ -1,0 +1,17 @@
+{
+  "timestamp": "2026-05-30T18:45:49.455423",
+  "agent_id": "unknown",
+  "tool": "call_ha_service",
+  "parameters": {
+    "domain": "lock",
+    "service": "unlock",
+    "entity_id": "lock.front_door"
+  },
+  "dry_run": false,
+  "result": {
+    "action": "call_ha_service",
+    "status": "queued_for_approval",
+    "message": "Service lock.unlock requires manual approval as it is high-impact."
+  },
+  "status": "success"
+}

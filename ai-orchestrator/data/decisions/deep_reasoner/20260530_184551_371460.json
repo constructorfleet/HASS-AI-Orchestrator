@@ -1,0 +1,20 @@
+{
+  "timestamp": "2026-05-30T18:45:51.371471",
+  "agent_id": "deep_reasoner",
+  "run_id": "7364c31f110540d081a933403a9e976b",
+  "goal": "say hello",
+  "answer": "streaming hello",
+  "iterations": 1,
+  "tool_calls": 0,
+  "stopped_reason": "final",
+  "duration_ms": 0,
+  "trace": [
+    {
+      "iteration": 1,
+      "thought": "streaming hello",
+      "tool_calls": [],
+      "tool_results": [],
+      "duration_ms": 0
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "timestamp": "2026-05-30T18:45:49.450563",
+  "agent_id": "unknown",
+  "tool": "call_ha_service",
+  "parameters": {
+    "domain": "shell_command",
+    "service": "restart_host",
+    "entity_id": "none"
+  },
+  "dry_run": false,
+  "result": {
+    "error": "Access to domain 'shell_command' is blocked for security reasons.",
+    "executed": false
+  },
+  "status": "success"
+}

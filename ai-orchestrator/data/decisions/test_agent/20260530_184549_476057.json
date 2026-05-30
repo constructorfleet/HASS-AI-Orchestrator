@@ -1,0 +1,19 @@
+{
+  "timestamp": "2026-05-30T18:45:49.475996",
+  "agent_id": "test_agent",
+  "tool": "get_climate_state",
+  "parameters": {
+    "entity_id": "climate.test_room"
+  },
+  "dry_run": true,
+  "result": {
+    "entity_id": "climate.test_room",
+    "state": "heat",
+    "current_temperature": 20.0,
+    "target_temperature": 21.0,
+    "hvac_mode": "heat",
+    "preset_mode": "none",
+    "attributes": {}
+  },
+  "status": "success"
+}

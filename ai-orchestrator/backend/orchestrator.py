@@ -691,15 +691,15 @@ OUTPUT REQUIREMENTS:
                 )
                 html_content = response.text
             else:
-                # Fallback to local Ollama (might be less 'poppy' but functional)
-                response = self.llm_client.chat(
-                    model=self.model_name,
-                    messages=[
+                # Use the configured LLM provider (Ollama, OpenAI, GitHub Models, Foundry, etc.)
+                html_content = self.llm_provider.chat(
+                    self.model_name,
+                    [
                         {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt}
-                    ]
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    max_tokens=8192,
                 )
-                html_content = response["message"]["content"]
             
             # Clean up markdown code blocks if present
             import re
