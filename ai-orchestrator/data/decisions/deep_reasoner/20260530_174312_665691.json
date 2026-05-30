@@ -1,0 +1,46 @@
+{
+  "timestamp": "2026-05-30T17:43:12.665701",
+  "agent_id": "deep_reasoner",
+  "run_id": "c47ac7a10cbb4e4ab8818877b21406cf",
+  "goal": "plan kitchen light",
+  "answer": "plan complete",
+  "iterations": 2,
+  "tool_calls": 1,
+  "stopped_reason": "final",
+  "duration_ms": 0,
+  "trace": [
+    {
+      "iteration": 1,
+      "thought": "planning",
+      "tool_calls": [
+        {
+          "id": "c1",
+          "name": "turn_on_light",
+          "arguments": {
+            "entity_id": "light.kitchen"
+          }
+        }
+      ],
+      "tool_results": [
+        {
+          "id": "c1",
+          "name": "turn_on_light",
+          "result": {
+            "ok": true,
+            "dry_run": true,
+            "note": "Plan mode: action recorded for approval, not executed.",
+            "intent_sequence": 1
+          }
+        }
+      ],
+      "duration_ms": 0
+    },
+    {
+      "iteration": 2,
+      "thought": "plan complete",
+      "tool_calls": [],
+      "tool_results": [],
+      "duration_ms": 0
+    }
+  ]
+}

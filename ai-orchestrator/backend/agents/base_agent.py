@@ -14,6 +14,115 @@ from ha_client import HAWebSocketClient
 from llm_providers import make_chat_provider
 from mcp_server import MCPServer
 
+# Optional bus import — avoids a hard dependency when running agents in
+# isolation or unit tests that don't wire up the bus.
+try:
+    from agent_bus import AgentBus, AgentMessage
+except ImportError:  # pragma: no cover
+    AgentBus = None  # type: ignore[assignment,misc]
+    AgentMessage = None  # type: ignore[assignment,misc]
+
+
+# ---------------------------------------------------------------------------
+# Schedule helpers
+# ---------------------------------------------------------------------------
+
+_DAY_MAP: Dict[str, int] = {
+    "mon": 0, "monday": 0,
+    "tue": 1, "tuesday": 1,
+    "wed": 2, "wednesday": 2,
+    "thu": 3, "thursday": 3,
+    "fri": 4, "friday": 4,
+    "sat": 5, "saturday": 5,
+    "sun": 6, "sunday": 6,
+}
+
+
+def _parse_active_hours(spec: str):
+    """Parse ``"HH:MM-HH:MM"`` into ``(start_minutes, end_minutes)``."""
+    parts = spec.strip().split("-")
+    if len(parts) != 2:
+        raise ValueError(f"active_hours must be 'HH:MM-HH:MM', got {spec!r}")
+    def _to_min(s: str) -> int:
+        h, m = s.strip().split(":")
+        return int(h) * 60 + int(m)
+    return _to_min(parts[0]), _to_min(parts[1])
+
+
+def is_agent_active(schedule: Optional[Dict], dt: Optional[datetime] = None) -> bool:
+    """
+    Return ``True`` if the agent should be active at *dt* (default: now).
+
+    Supported schedule keys:
+
+    * ``active_hours`` – ``"HH:MM-HH:MM"``; spans midnight when
+      start > end (e.g. ``"22:00-06:00"``).
+    * ``days`` – list of day abbreviations, e.g. ``["mon", "tue"]``.
+      ``"weekdays"`` and ``"weekends"`` are accepted as shortcuts.
+    * ``cron`` – standard 5-field cron expression.  The agent is
+      considered active during **any minute that matches** the expression
+      (useful for "wake up at 06:00 every weekday" patterns when combined
+      with a wide minute range like ``"* 6-9 * * 1-5"``).
+
+    All specified keys must pass for the agent to be considered active.
+    An empty or ``None`` schedule always returns ``True``.
+    """
+    if not schedule:
+        return True
+
+    dt = dt or datetime.now()
+
+    # -- cron -----------------------------------------------------------------
+    cron_expr = schedule.get("cron")
+    if cron_expr:
+        try:
+            # Import lazily to avoid circular deps in minimal test environments.
+            from triggers import CronExpr  # type: ignore[import]
+            expr = CronExpr.parse(cron_expr)
+            if not expr.matches(dt):
+                return False
+        except Exception as exc:
+            # Bad cron → treat as always active so agents don't silently stop.
+            import logging
+            logging.getLogger(__name__).warning(
+                "Invalid schedule.cron %r: %s — treating as always active", cron_expr, exc
+            )
+
+    # -- active_hours ---------------------------------------------------------
+    active_hours = schedule.get("active_hours")
+    if active_hours:
+        start_min, end_min = _parse_active_hours(active_hours)
+        current_min = dt.hour * 60 + dt.minute
+        if start_min <= end_min:
+            in_hours = start_min <= current_min <= end_min
+        else:  # spans midnight
+            in_hours = current_min >= start_min or current_min <= end_min
+        if not in_hours:
+            return False
+
+    # -- days -----------------------------------------------------------------
+    days_cfg = schedule.get("days")
+    if days_cfg:
+        # Accept shortcut strings alongside lists.
+        if isinstance(days_cfg, str):
+            days_cfg = [days_cfg]
+        allowed: set = set()
+        for d in days_cfg:
+            d_lower = d.lower()
+            if d_lower == "weekdays":
+                allowed.update(range(0, 5))
+            elif d_lower == "weekends":
+                allowed.update([5, 6])
+            else:
+                val = _DAY_MAP.get(d_lower)
+                if val is None:
+                    raise ValueError(f"Unknown day abbreviation: {d!r}")
+                allowed.add(val)
+        if dt.weekday() not in allowed:
+            return False
+
+    return True
+
 
 class BaseAgent(ABC):
     """
@@ -31,7 +140,11 @@ class BaseAgent(ABC):
         rag_manager: Optional[Any] = None,
         model_name: str = "mistral:7b-instruct",
         decision_interval: int = 120,
-        broadcast_func: Optional[Any] = None
+        broadcast_func: Optional[Any] = None,
+        schedule: Optional[Dict] = None,
+        agent_bus: Optional[Any] = None,
+        publishes: Optional[List[str]] = None,
+        listens_to: Optional[List[str]] = None,
     ):
         """
         Initialize base agent.
@@ -44,9 +157,18 @@ class BaseAgent(ABC):
             skills_path: Path to SKILLS.md file
             rag_manager: Optional RAG Manager for context retrieval
             model_name: Ollama model name
-            model_name: Ollama model name
             decision_interval: Seconds between decisions
             broadcast_func: Optional async callback for dashboard updates
+            schedule: Optional schedule dict with ``active_hours``, ``days``
+                and/or ``cron`` keys that gate when the agent's decision loop
+                runs.  ``None`` means always active.
+            agent_bus: Optional :class:`AgentBus` instance for inter-agent
+                pub/sub communication.
+            publishes: List of topic names this agent will publish events on
+                after each decision cycle that produces actions.
+            listens_to: List of topic names from other agents; when a message
+                arrives on any of these topics the decision loop is woken
+                immediately instead of waiting for the next interval.
         """
         self.agent_id = agent_id
         self.name = name
@@ -62,6 +184,20 @@ class BaseAgent(ABC):
         self.decision_interval = decision_interval
         self.broadcast_func = broadcast_func
         self.status = "initializing"
+
+        # Scheduling
+        self.schedule = schedule
+
+        # Inter-agent pub/sub
+        self.agent_bus = agent_bus
+        self.publishes: List[str] = list(publishes or [])
+        self.listens_to: List[str] = list(listens_to or [])
+        # Queue fed by on_bus_message(); the decision loop drains it.
+        self._trigger_queue: asyncio.Queue = asyncio.Queue()
+        # Register subscriptions if a bus was provided.
+        if self.agent_bus is not None and self.listens_to:
+            for topic in self.listens_to:
+                self.agent_bus.subscribe(topic, self.on_bus_message)
         
         # Load skills from SKILLS.md
         self.skills = self.load_skills()
@@ -323,15 +459,42 @@ If no action is needed, return an empty actions array.
         self.status = "idle"
         # Delay start slightly to allow system to settle
         await asyncio.sleep(5)
-        print(f"✓ {self.name} decision loop started (interval: {self.decision_interval}s)")
+        sched_info = f", schedule={self.schedule}" if self.schedule else ""
+        listen_info = f", listens_to={self.listens_to}" if self.listens_to else ""
+        print(f"✓ {self.name} decision loop started (interval: {self.decision_interval}s{sched_info}{listen_info})")
         
         while True:
             try:
+                # --- Schedule gate ---
+                if not is_agent_active(self.schedule):
+                    self.status = "scheduled_inactive"
+                    await self._broadcast_status("scheduled_inactive")
+                    # Re-check every 60 s to avoid tight busy-loop while still
+                    # reacting promptly when the active window opens.
+                    await asyncio.sleep(60)
+                    continue
+
                 self.status = "deciding"
                 await self._broadcast_status("deciding")
+
+                # Drain any pending bus trigger message to include in context.
+                triggered_by: Optional[Dict] = None
+                try:
+                    msg = self._trigger_queue.get_nowait()
+                    triggered_by = {
+                        "topic": msg.topic,
+                        "sender_id": msg.sender_id,
+                        "payload": msg.payload,
+                        "timestamp": msg.timestamp,
+                    }
+                    print(f"⚡ {self.name} triggered by bus event: {msg.topic} from {msg.sender_id}")
+                except asyncio.QueueEmpty:
+                    pass
                 
                 # Make decision
                 context = await self.gather_context()
+                if triggered_by:
+                    context["triggered_by"] = triggered_by
                 decision = await self.decide(context)
                 
                 # Execute decision
@@ -340,6 +503,9 @@ If no action is needed, return an empty actions array.
                 # Log decision
                 self.log_decision(context, decision, results)
                 
+                # Publish decision events to the bus for listening agents.
+                await self._publish_decision_events(decision)
+
                 # Broadcast decision result
                 if self.broadcast_func:
                     await self.broadcast_func({
@@ -357,14 +523,87 @@ If no action is needed, return an empty actions array.
                 await self._broadcast_status("idle")
                 print(f"✓ {self.name} decision completed (waiting {self.decision_interval}s)")
                 
-                # Sleep at END of loop
-                await asyncio.sleep(self.decision_interval)
+                # Sleep until next interval OR a bus message arrives on a
+                # listened topic, whichever comes first.
+                await self._wait_for_next_cycle()
             
             except Exception as e:
                 self.status = "error"
                 print(f"❌ {self.name} decision loop error: {e}")
                 await self._broadcast_status("error")
                 await asyncio.sleep(10)  # Back off on error
+
+    async def _wait_for_next_cycle(self) -> None:
+        """Sleep until ``decision_interval`` elapses **or** a bus message wakes us."""
+        if not self.listens_to:
+            # No subscriptions — plain sleep.
+            await asyncio.sleep(self.decision_interval)
+            return
+
+        # Create tasks for both the timer and the next queue item.
+        sleep_task = asyncio.create_task(asyncio.sleep(self.decision_interval))
+        trigger_task = asyncio.create_task(self._trigger_queue.get())
+
+        done, pending = await asyncio.wait(
+            {sleep_task, trigger_task},
+            return_when=asyncio.FIRST_COMPLETED,
+        )
+
+        # Cancel whichever didn't fire.
+        for task in pending:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
+        # If a bus message arrived, put it back so the next loop iteration
+        # can include it in the decision context.
+        if trigger_task in done:
+            try:
+                msg = trigger_task.result()
+                await self._trigger_queue.put(msg)
+            except Exception:
+                pass
+
+    async def on_bus_message(self, message: Any) -> None:
+        """
+        Receive a message from the :class:`AgentBus`.
+
+        Called by the bus when a message arrives on any of the topics
+        listed in :attr:`listens_to`.  The message is placed in the
+        internal trigger queue so the decision loop picks it up on the
+        next iteration (or wakes immediately if sleeping).
+        """
+        await self._trigger_queue.put(message)
+
+    async def _publish_decision_events(self, decision: Dict) -> None:
+        """
+        Publish agent bus events after a decision that produced actions.
+
+        Each topic in :attr:`publishes` receives an :class:`AgentMessage`
+        with the decision reasoning and action list as payload.  Topics are
+        only published when at least one action was returned.
+        """
+        if not self.agent_bus or not self.publishes:
+            return
+        actions = decision.get("actions", [])
+        if not actions:
+            return
+        payload = {
+            "reasoning": decision.get("reasoning", ""),
+            "actions": actions,
+        }
+        for topic in self.publishes:
+            try:
+                msg = AgentMessage(  # type: ignore[call-arg]
+                    topic=topic,
+                    sender_id=self.agent_id,
+                    payload=payload,
+                )
+                await self.agent_bus.publish(msg)
+            except Exception as exc:
+                print(f"⚠️ {self.name}: failed to publish to bus topic {topic!r}: {exc}")
     
     @abstractmethod
     async def gather_context(self) -> Dict:

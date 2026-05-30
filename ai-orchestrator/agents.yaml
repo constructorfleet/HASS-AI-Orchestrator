@@ -28,10 +28,51 @@ agents:
     name: "Security Manager"
     model: "mistral:7b-instruct"
     decision_interval: 180
+    # Publish events so other agents can react without re-polling HA.
+    publishes:
+      - "person_detected"
+      - "door_opened"
     instruction: |
       Monitor locks and sensors.
       Lock doors if no motion for 30 mins.
       Report any anomalies.
+
+  # Example: schedule-aware agent.
+  # Only activates on weekday mornings; sleeps the rest of the time to
+  # avoid burning LLM resources at 3 AM.
+  #
+  # - id: "morning_routine"
+  #   name: "Morning Routine"
+  #   model: "mistral:7b-instruct"
+  #   decision_interval: 300
+  #   schedule:
+  #     active_hours: "06:00-09:00"
+  #     days: ["mon", "tue", "wed", "thu", "fri"]
+  #   instruction: "Gradually turn on lights and start the coffee maker."
+
+  # Example: event-driven agent.
+  # Wakes immediately when security publishes "person_detected" instead
+  # of waiting for its own polling interval.
+  #
+  # - id: "porch_lighting"
+  #   name: "Porch Lighting"
+  #   model: "phi3.5:3.8b"
+  #   decision_interval: 300
+  #   listens_to:
+  #     - "person_detected"
+  #   entities:
+  #     - light.porch
+  #   instruction: "When a person is detected at night, illuminate the porch for 5 minutes."
+
+  # Example: full cron expression for calendar-aware scheduling.
+  #
+  # - id: "energy_manager"
+  #   name: "Energy Manager"
+  #   model: "mistral:7b-instruct"
+  #   decision_interval: 600
+  #   schedule:
+  #     cron: "0 18-22 * * *"   # active 18:00–22:00 every day
+  #   instruction: "Shift non-critical loads to off-peak hours. Report current energy cost."
 
   # Example of a new custom agent
   # - id: "pool_manager"
