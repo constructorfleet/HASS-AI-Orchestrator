@@ -116,6 +116,7 @@ import yaml
 import logging
 
 logger = logging.getLogger(__name__)
+FAST_MODEL_THRESHOLD_SECONDS = 60
 
 # API token for optional bearer auth (read at startup, applied via middleware)
 _api_token: Optional[str] = None
@@ -240,7 +241,11 @@ async def lifespan(app: FastAPI):
     gemini_api_key_opt = ""
     use_gemini_dashboard_opt = False
     gemini_model_name_opt = "gemini-1.5-pro"
-    
+    ollama_host_opt = "http://localhost:11434"
+    smart_model_opt = "deepseek-r1:8b"
+    fast_model_opt = "mistral:7b-instruct"
+    orchestrator_model_opt = "deepseek-r1:8b"
+
     options_path = Path("/data/options.json")
     if options_path.exists():
         try:
@@ -249,6 +254,10 @@ async def lifespan(app: FastAPI):
                 dry_run = opts.get("dry_run_mode", True)
                 disable_telemetry = opts.get("disable_telemetry", True)
                 ha_access_token_opt = opts.get("ha_access_token", "").strip()
+                ollama_host_opt = opts.get("ollama_host", ollama_host_opt).strip()
+                smart_model_opt = opts.get("smart_model", smart_model_opt).strip()
+                fast_model_opt = opts.get("fast_model", fast_model_opt).strip()
+                orchestrator_model_opt = opts.get("orchestrator_model", orchestrator_model_opt).strip()
                 
                 # Gemini Options
                 gemini_api_key_opt = opts.get("gemini_api_key", "").strip()
@@ -291,6 +300,10 @@ async def lifespan(app: FastAPI):
     else:
         # Fallback to env var
         dry_run = os.getenv("DRY_RUN_MODE", "true").lower() == "true"
+        ollama_host_opt = os.getenv("OLLAMA_HOST", ollama_host_opt)
+        smart_model_opt = os.getenv("SMART_MODEL", smart_model_opt)
+        fast_model_opt = os.getenv("FAST_MODEL", fast_model_opt)
+        orchestrator_model_opt = os.getenv("ORCHESTRATOR_MODEL", orchestrator_model_opt)
         gemini_api_key_opt = os.getenv("GEMINI_API_KEY", "")
         use_gemini_dashboard_opt = os.getenv("USE_GEMINI_FOR_DASHBOARD", "false").lower() == "true"
         gemini_model_name_opt = os.getenv("GEMINI_MODEL_NAME", "gemini-1.5-pro")
@@ -361,7 +374,8 @@ async def lifespan(app: FastAPI):
     enable_rag = os.getenv("ENABLE_RAG", "true").lower() == "true"
     if enable_rag:
         try:
-            rag_manager = RagManager(persist_dir="/data/chroma", disable_telemetry=disable_telemetry)
+            data_base = Path(os.getenv("DATA_DIR", "/data"))
+            rag_manager = RagManager(persist_dir=str(data_base / "chroma"), disable_telemetry=disable_telemetry)
             # FIX: Pass lambda to resolve the global ha_client at runtime, not now (which is None)
             knowledge_base = KnowledgeBase(rag_manager, lambda: ha_client)
             print("✓ RAG Manager & Knowledge Base initialized")
@@ -379,7 +393,8 @@ async def lifespan(app: FastAPI):
     print(f"✓ MCP Server initialized (dry_run={dry_run})")
     
     # 4. Initialize Approval Queue
-    approval_queue = ApprovalQueue(db_path="/data/approvals.db")
+    _data_base = Path(os.getenv("DATA_DIR", "/data"))
+    approval_queue = ApprovalQueue(db_path=str(_data_base / "approvals.db"))
     # Register callback for dashboard notifications
     approval_queue.register_callback(broadcast_approval_request)
     print("✓ Approval Queue initialized")
@@ -389,10 +404,15 @@ async def lifespan(app: FastAPI):
     # Orchestrator, RAG, DeepReasoningAgent) sees the same provider
     # selection and credentials regardless of construction order.
     _llm_env_map = {
+        "OLLAMA_HOST": locals().get("ollama_host_opt", ""),
+        "SMART_MODEL": locals().get("smart_model_opt", ""),
+        "FAST_MODEL": locals().get("fast_model_opt", ""),
+        "ORCHESTRATOR_MODEL": locals().get("orchestrator_model_opt", ""),
         "LLM_PROVIDER": locals().get("llm_provider_opt", ""),
         "OPENAI_API_KEY": locals().get("openai_api_key_opt", ""),
         "OPENAI_BASE_URL": locals().get("openai_base_url_opt", ""),
         "OPENAI_MODEL": locals().get("openai_model_opt", ""),
+        "GEMINI_MODEL_NAME": locals().get("gemini_model_name_opt", ""),
         "GITHUB_TOKEN": locals().get("github_token_opt", ""),
         "GITHUB_MODEL": locals().get("github_model_opt", ""),
         "FOUNDRY_ENDPOINT": locals().get("foundry_endpoint_opt", ""),
@@ -400,12 +420,30 @@ async def lifespan(app: FastAPI):
         "FOUNDRY_BEARER_TOKEN": locals().get("foundry_bearer_token_opt", ""),
         "FOUNDRY_MODEL": locals().get("foundry_model_opt", ""),
         "FOUNDRY_AGENT_ID": locals().get("foundry_agent_id_opt", ""),
+        "DEEP_REASONING_MODEL": locals().get("deep_reasoning_model_opt", ""),
+        "DEEP_REASONING_MAX_ITERATIONS": str(locals().get("deep_reasoning_max_iter_opt", "")),
+        "GEMINI_API_KEY": locals().get("gemini_api_key_opt", ""),
+        "USE_GEMINI_FOR_DASHBOARD": "true" if locals().get("use_gemini_dashboard_opt", False) else "false",
+        "ANTHROPIC_API_KEY": locals().get("anthropic_api_key_opt", ""),
+        "ANTHROPIC_MODEL": locals().get("anthropic_model_opt", ""),
+        "MCP_SERVER_URL": locals().get("mcp_server_url_opt", ""),
+        "MCP_SERVER_TOKEN": locals().get("mcp_server_token_opt", ""),
     }
     for _env_key, _env_val in _llm_env_map.items():
         if _env_val:
             os.environ[_env_key] = _env_val
-    if _llm_env_map.get("LLM_PROVIDER"):
-        print(f"✓ LLM provider: {_llm_env_map['LLM_PROVIDER']}")
+
+    llm_provider = locals().get("llm_provider_opt", "") or os.getenv("LLM_PROVIDER", "")
+    openai_api_key = locals().get("openai_api_key_opt", "") or os.getenv("OPENAI_API_KEY", "")
+    openai_base_url = locals().get("openai_base_url_opt", "") or os.getenv("OPENAI_BASE_URL", "")
+    openai_model = locals().get("openai_model_opt", "") or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+    github_token = locals().get("github_token_opt", "") or os.getenv("GITHUB_TOKEN", "")
+    github_model = locals().get("github_model_opt", "") or os.getenv("GITHUB_MODEL", "gpt-4o-mini")
+    foundry_endpoint = locals().get("foundry_endpoint_opt", "") or os.getenv("FOUNDRY_ENDPOINT", "")
+    foundry_api_key = locals().get("foundry_api_key_opt", "") or os.getenv("FOUNDRY_API_KEY", "")
+    foundry_bearer_token = locals().get("foundry_bearer_token_opt", "") or os.getenv("FOUNDRY_BEARER_TOKEN", "")
+    foundry_model = locals().get("foundry_model_opt", "") or os.getenv("FOUNDRY_MODEL", "")
+    foundry_agent_id = locals().get("foundry_agent_id_opt", "") or os.getenv("FOUNDRY_AGENT_ID", "")
     
     # 5. Initialize Agents
     # Helper to parse entity lists
@@ -437,6 +475,11 @@ async def lifespan(app: FastAPI):
                 
             for agent_cfg in config.get('agents', []):
                 agent_id = agent_cfg['id']
+                try:
+                    decision_interval = int(agent_cfg.get('decision_interval', 120) or 120)
+                except (TypeError, ValueError):
+                    decision_interval = 120
+                model_default = fast_model_opt if decision_interval <= FAST_MODEL_THRESHOLD_SECONDS else smart_model_opt
                 
                 # Check if entities are defined in yaml, otherwise fallback to env vars (backwards compat)
                 entities = agent_cfg.get('entities', [])
@@ -455,10 +498,19 @@ async def lifespan(app: FastAPI):
                     ha_client=lambda: ha_client,
                     entities=entities,
                     rag_manager=rag_manager,
-                    model_name=agent_cfg.get('model', os.getenv("DEFAULT_MODEL", "mistral:7b-instruct")),
-                    decision_interval=agent_cfg.get('decision_interval', 120),
+                    model_name=agent_cfg.get('model', model_default),
+                    decision_interval=decision_interval,
                     broadcast_func=broadcast_to_dashboard,
-                    knowledge=agent_cfg.get('knowledge', "")
+                    knowledge=agent_cfg.get('knowledge', ""),
+                    provider=llm_provider or None,
+                    ollama_host=ollama_host_opt,
+                    openai_api_key=openai_api_key or None,
+                    openai_base_url=openai_base_url or None,
+                    github_token=github_token or None,
+                    foundry_endpoint=foundry_endpoint or None,
+                    foundry_api_key=foundry_api_key or None,
+                    foundry_bearer_token=foundry_bearer_token or None,
+                    foundry_api_version=os.getenv("FOUNDRY_API_VERSION"),
                 )
                 print(f"  ✓ Loaded agent: {agent_cfg['name']} ({agent_id})")
                 
@@ -482,12 +534,20 @@ async def lifespan(app: FastAPI):
         mcp_server=mcp_server,
         approval_queue=approval_queue,
         agents=agents,
-        model_name=os.getenv("ORCHESTRATOR_MODEL", "deepseek-r1:8b"),
+        model_name=orchestrator_model_opt,
         planning_interval=int(os.getenv("DECISION_INTERVAL", "120")),
-        ollama_host=os.getenv("OLLAMA_HOST", "http://localhost:11434"),
+        ollama_host=ollama_host_opt,
         gemini_api_key=gemini_api_key_opt or os.getenv("GEMINI_API_KEY"),
         use_gemini_for_dashboard=use_gemini_dashboard_opt or os.getenv("USE_GEMINI_FOR_DASHBOARD", "false").lower() == "true",
-        gemini_model_name=gemini_model_name_opt or os.getenv("GEMINI_MODEL_NAME", "gemini-1.5-pro")
+        gemini_model_name=gemini_model_name_opt or os.getenv("GEMINI_MODEL_NAME", "gemini-1.5-pro"),
+        provider=llm_provider or None,
+        openai_api_key=openai_api_key or None,
+        openai_base_url=openai_base_url or None,
+        github_token=github_token or None,
+        foundry_endpoint=foundry_endpoint or None,
+        foundry_api_key=foundry_api_key or None,
+        foundry_bearer_token=foundry_bearer_token or None,
+        foundry_api_version=os.getenv("FOUNDRY_API_VERSION"),
     )
     print(f"✓ Orchestrator initialized with model {orchestrator.model_name}")
     
@@ -516,21 +576,6 @@ async def lifespan(app: FastAPI):
     anthropic_model = locals().get("anthropic_model_opt", "") or os.getenv("ANTHROPIC_MODEL", "claude-opus-4-7")
     max_iter = int(locals().get("deep_reasoning_max_iter_opt", 12) or 12)
 
-    # Phase 9 — re-read provider locals (env was already exported in
-    # step 4.5 so other components see the same credentials; we capture
-    # them here to pass explicitly to DeepReasoningAgent).
-    llm_provider = locals().get("llm_provider_opt", "") or os.getenv("LLM_PROVIDER", "")
-    openai_api_key = locals().get("openai_api_key_opt", "") or os.getenv("OPENAI_API_KEY", "")
-    openai_base_url = locals().get("openai_base_url_opt", "") or os.getenv("OPENAI_BASE_URL", "")
-    openai_model = locals().get("openai_model_opt", "") or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-    github_token = locals().get("github_token_opt", "") or os.getenv("GITHUB_TOKEN", "")
-    github_model = locals().get("github_model_opt", "") or os.getenv("GITHUB_MODEL", "gpt-4o-mini")
-    foundry_endpoint = locals().get("foundry_endpoint_opt", "") or os.getenv("FOUNDRY_ENDPOINT", "")
-    foundry_api_key = locals().get("foundry_api_key_opt", "") or os.getenv("FOUNDRY_API_KEY", "")
-    foundry_bearer_token = locals().get("foundry_bearer_token_opt", "") or os.getenv("FOUNDRY_BEARER_TOKEN", "")
-    foundry_model = locals().get("foundry_model_opt", "") or os.getenv("FOUNDRY_MODEL", "")
-    foundry_agent_id = locals().get("foundry_agent_id_opt", "") or os.getenv("FOUNDRY_AGENT_ID", "")
-
     if mcp_url:
         external_mcp = ExternalMCPClient(url=mcp_url, token=mcp_token or None, name="external_mcp")
         ok = await external_mcp.connect()
@@ -553,7 +598,7 @@ async def lifespan(app: FastAPI):
             external_mcp=external_mcp,
             ha_client=ha_client,
             ollama_model=deep_model,
-            ollama_host=os.getenv("OLLAMA_HOST"),
+            ollama_host=ollama_host_opt,
             anthropic_api_key=anthropic_key or None,
             anthropic_model=anthropic_model,
             provider=llm_provider or None,
@@ -596,7 +641,15 @@ async def lifespan(app: FastAPI):
         dashboard_studio = DashboardStudio(
             ha_client_provider=lambda: ha_client,
             store_dir=studio_dir,
-            default_provider=os.getenv("LLM_PROVIDER") or None,
+            default_provider=llm_provider or None,
+            ollama_host=ollama_host_opt,
+            openai_api_key=openai_api_key or None,
+            openai_base_url=openai_base_url or None,
+            github_token=github_token or None,
+            foundry_endpoint=foundry_endpoint or None,
+            foundry_api_key=foundry_api_key or None,
+            foundry_bearer_token=foundry_bearer_token or None,
+            foundry_api_version=os.getenv("FOUNDRY_API_VERSION"),
         )
         app.state.dashboard_studio = dashboard_studio
         print(f"✓ Dashboard Studio ready ({len(dashboard_studio.list_dashboards())} saved at {studio_dir})")
@@ -1234,7 +1287,8 @@ async def get_agents():
 @app.get("/api/decisions")
 async def get_decisions(limit: int = 100, agent_id: Optional[str] = None):
     """Get recent decision history (aggregated or per agent)"""
-    base_dir = Path("/data/decisions")
+    data_base = Path(os.getenv("DATA_DIR", "/data"))
+    base_dir = data_base / "decisions"
     all_files = []
     
     # If agent_id specified, look there. Else look in all subdirs (including orchestrator)

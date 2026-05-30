@@ -123,7 +123,10 @@ class MCPServer:
         self.rag_manager = rag_manager
         self.dry_run = dry_run
         self.tools = self._register_tools()
-        self.log_dir = Path("/data/decisions")
+        data_base = Path(os.environ.get("DATA_DIR", "/data"))
+        if not data_base.exists() or not os.access(str(data_base), os.W_OK):
+            data_base = Path(__file__).parent.parent / "data"
+        self.log_dir = data_base / "decisions"
         self.log_dir.mkdir(parents=True, exist_ok=True)
         
     @property
