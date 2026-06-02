@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-05-30T18:45:49.470885",
+  "agent_id": "test_agent",
+  "tool": "set_temperature",
+  "parameters": {
+    "entity_id": "climate.test",
+    "temperature": 22.0,
+    "hvac_mode": "heat"
+  },
+  "dry_run": true,
+  "result": {
+    "action": "set_temperature",
+    "entity_id": "climate.test",
+    "temperature": 22.0,
+    "hvac_mode": "heat",
+    "executed": false,
+    "dry_run": true,
+    "message": "Dry-run mode: Action logged but not executed"
+  },
+  "status": "success"
+}

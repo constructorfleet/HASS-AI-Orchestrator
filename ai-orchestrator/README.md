@@ -71,13 +71,13 @@ The system now features a real-time, LLM-driven visualization engine that builds
         ollama pull mistral:7b-instruct
         ollama pull nomic-embed-text
         ```
-    *   **Use-Case Models**: Tune `orchestrator_model`, `smart_model`, `fast_model`, and `deep_reasoning_model` for the planning, specialist, and reasoning paths.
-    *   **Dashboard Generation**: Optionally set `gemini_api_key`, `use_gemini_for_dashboard`, and `gemini_model_name` for AI Visual Dashboard generation.
-    *   **LLM Provider** (v0.10.0+, optional): Switch every agent and the orchestrator over to a remote provider by setting `llm_provider` to one of:
+    *   **Use-Case Models**: Tune `architect.orchestrator_model`, `architect.smart_model`, `architect.fast_model`, and `deep_reasoning.model` for the planning, specialist, and reasoning paths.
+    *   **Dashboard Generation**: Optionally set `gemini.api_key`, `gemini.use_for_dashboard`, and `gemini.model` for AI Visual Dashboard generation.
+    *   **LLM Provider** (v0.10.0+, optional): Switch every agent and the orchestrator over to a remote provider by setting `architect.provider` to one of:
         *   `ollama` *(default — local, private, free)*
-        *   `openai` — set `openai_api_key` (and optionally `openai_base_url` for any OpenAI-compatible endpoint) and `openai_model` (e.g. `gpt-4o-mini`).
-        *   `github` — set `github_token` (a GitHub PAT with the `models:read` scope) and `github_model` (e.g. `gpt-4o-mini`). Uses [GitHub Models](https://models.github.ai/).
-        *   `foundry` — set `foundry_endpoint` (your Microsoft Foundry / Azure AI Inference URL) plus either `foundry_api_key` *or* `foundry_bearer_token`, and `foundry_model` (e.g. `gpt-4o`). Set `foundry_agent_id` to call a hosted Foundry Agent instead of a model deployment (tools then run server-side in Foundry).
+        *   `openai` — set `openai.api_key` (and optionally `openai.base_url` for any OpenAI-compatible endpoint) and `openai.model` (e.g. `gpt-4o-mini`).
+        *   `github` — set `github.token` (a GitHub PAT with the `models:read` scope) and `github.model` (e.g. `gpt-4o-mini`). Uses [GitHub Models](https://models.github.ai/).
+        *   `foundry` — set `foundry.endpoint` (your Microsoft Foundry / Azure AI Inference URL) plus either `foundry.api_key` *or* `foundry.bearer_token`, and `foundry.model` (e.g. `gpt-4o`). Set `foundry.agent_id` to call a hosted Foundry Agent instead of a model deployment (tools then run server-side in Foundry).
         *   On any misconfiguration the add-on silently falls back to Ollama, so a wrong key never leaks conversations to a cloud provider.
     *   **Access Token**: Create a Long-Lived Access Token in your HA User Profile.
     *   **Direct Access Mode**: Automatically falls back to Direct Core Access (e.g., `http://homeassistant:8123`) if the Supervisor Proxy is unavailable or tokens are mismatched.

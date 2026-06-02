@@ -1,0 +1,20 @@
+{
+  "timestamp": "2026-05-30T18:45:51.147235",
+  "agent_id": "lighting",
+  "tool": "turn_on_light",
+  "parameters": {
+    "entity_id": "light.living_room",
+    "brightness": 80,
+    "color_temp": 4000
+  },
+  "dry_run": true,
+  "result": {
+    "action": "turn_on_light",
+    "entity_id": "light.living_room",
+    "brightness": 80,
+    "color_temp": 4000,
+    "executed": false,
+    "dry_run": true
+  },
+  "status": "success"
+}

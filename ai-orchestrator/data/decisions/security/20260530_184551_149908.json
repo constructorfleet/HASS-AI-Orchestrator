@@ -1,0 +1,16 @@
+{
+  "timestamp": "2026-05-30T18:45:51.149880",
+  "agent_id": "security",
+  "tool": "unlock_door",
+  "parameters": {
+    "entity_id": "lock.front_door"
+  },
+  "dry_run": false,
+  "result": {
+    "action": "unlock_door",
+    "entity_id": "lock.front_door",
+    "requires_approval": true,
+    "message": "Door unlock requires human approval"
+  },
+  "status": "success"
+}

@@ -1,0 +1,19 @@
+{
+  "timestamp": "2026-05-30T18:45:49.457957",
+  "agent_id": "unknown",
+  "tool": "call_ha_service",
+  "parameters": {
+    "domain": "climate",
+    "service": "set_temperature",
+    "entity_id": "climate.living_room",
+    "service_data": {
+      "temperature": 50.0
+    }
+  },
+  "dry_run": false,
+  "result": {
+    "error": "Safety validation failed for climate.set_temperature: 1 validation error for SetTemperatureParams\ntemperature\n  Value error, Temperature must be between 10.0\u00b0C and 30.0\u00b0C [type=value_error, input_value=50.0, input_type=float]\n    For further information visit https://errors.pydantic.dev/2.9/v/value_error",
+    "executed": false
+  },
+  "status": "success"
+}

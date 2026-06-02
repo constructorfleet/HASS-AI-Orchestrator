@@ -253,43 +253,62 @@ async def lifespan(app: FastAPI):
         try:
             with open(options_path, "r") as f:
                 opts = json.load(f)
+                def _get_opt(path: str, default=None, legacy_keys: Optional[List[str]] = None):
+                    node = opts
+                    for segment in path.split("."):
+                        if isinstance(node, dict) and segment in node:
+                            node = node[segment]
+                        else:
+                            node = None
+                            break
+                    if node is not None:
+                        return node
+                    for legacy_key in (legacy_keys or []):
+                        if legacy_key in opts:
+                            return opts[legacy_key]
+                    return default
+
+                def _get_opt_str(path: str, default: str = "", legacy_keys: Optional[List[str]] = None) -> str:
+                    value = _get_opt(path, default, legacy_keys=legacy_keys)
+                    return value.strip() if isinstance(value, str) else default
+
                 dry_run = opts.get("dry_run_mode", True)
                 disable_telemetry = opts.get("disable_telemetry", True)
-                ha_access_token_opt = opts.get("ha_access_token", "").strip()
+                ha_access_token_opt = _get_opt_str("home_assistant.access_token", "", legacy_keys=["ha_access_token"])
                 ollama_host_opt = opts.get("ollama_host", ollama_host_opt).strip()
-                smart_model_opt = opts.get("smart_model", smart_model_opt).strip()
-                fast_model_opt = opts.get("fast_model", fast_model_opt).strip()
-                orchestrator_model_opt = opts.get("orchestrator_model", orchestrator_model_opt).strip()
+                smart_model_opt = _get_opt_str("architect.smart_model", smart_model_opt, legacy_keys=["smart_model"])
+                fast_model_opt = _get_opt_str("architect.fast_model", fast_model_opt, legacy_keys=["fast_model"])
+                orchestrator_model_opt = _get_opt_str("architect.orchestrator_model", orchestrator_model_opt, legacy_keys=["orchestrator_model"])
                 
                 # Gemini Options
-                gemini_api_key_opt = opts.get("gemini_api_key", "").strip()
-                use_gemini_dashboard_opt = opts.get("use_gemini_for_dashboard", False)
-                gemini_model_name_opt = opts.get("gemini_model_name", "gemini-1.5-pro")
+                gemini_api_key_opt = _get_opt_str("gemini.api_key", "", legacy_keys=["gemini_api_key"])
+                use_gemini_dashboard_opt = bool(_get_opt("gemini.use_for_dashboard", False, legacy_keys=["use_gemini_for_dashboard"]))
+                gemini_model_name_opt = _get_opt_str("gemini.model", "gemini-1.5-pro", legacy_keys=["gemini_model_name"])
 
                 # Deep reasoning / external MCP options (Phase 7)
-                mcp_server_url_opt = opts.get("mcp_server_url", "").strip()
-                mcp_server_token_opt = opts.get("mcp_server_token", "").strip()
-                deep_reasoning_model_opt = opts.get("deep_reasoning_model", "qwen2.5:14b-instruct")
-                anthropic_api_key_opt = opts.get("anthropic_api_key", "").strip()
-                anthropic_model_opt = opts.get("anthropic_model", "claude-opus-4-7").strip()
-                deep_reasoning_max_iter_opt = int(opts.get("deep_reasoning_max_iterations", 12) or 12)
+                mcp_server_url_opt = _get_opt_str("mcp.server_url", "", legacy_keys=["mcp_server_url"])
+                mcp_server_token_opt = _get_opt_str("mcp.server_token", "", legacy_keys=["mcp_server_token"])
+                deep_reasoning_model_opt = _get_opt_str("deep_reasoning.model", "qwen2.5:14b-instruct", legacy_keys=["deep_reasoning_model"])
+                anthropic_api_key_opt = _get_opt_str("anthropic.api_key", "", legacy_keys=["anthropic_api_key"])
+                anthropic_model_opt = _get_opt_str("anthropic.model", "claude-opus-4-7", legacy_keys=["anthropic_model"])
+                deep_reasoning_max_iter_opt = int(_get_opt("deep_reasoning.max_iterations", 12, legacy_keys=["deep_reasoning_max_iterations"]) or 12)
 
                 # Phase 9 — multi-provider LLM options
-                llm_provider_opt = opts.get("llm_provider", "").strip()
-                openai_api_key_opt = opts.get("openai_api_key", "").strip()
-                openai_base_url_opt = opts.get("openai_base_url", "").strip()
-                openai_model_opt = opts.get("openai_model", "gpt-4o-mini").strip()
-                github_token_opt = opts.get("github_token", "").strip()
-                github_model_opt = opts.get("github_model", "gpt-4o-mini").strip()
-                foundry_endpoint_opt = opts.get("foundry_endpoint", "").strip()
-                foundry_api_key_opt = opts.get("foundry_api_key", "").strip()
-                foundry_bearer_token_opt = opts.get("foundry_bearer_token", "").strip()
-                foundry_model_opt = opts.get("foundry_model", "").strip()
-                foundry_agent_id_opt = opts.get("foundry_agent_id", "").strip()
+                llm_provider_opt = _get_opt_str("architect.provider", "", legacy_keys=["llm_provider"])
+                openai_api_key_opt = _get_opt_str("openai.api_key", "", legacy_keys=["openai_api_key"])
+                openai_base_url_opt = _get_opt_str("openai.base_url", "", legacy_keys=["openai_base_url"])
+                openai_model_opt = _get_opt_str("openai.model", "gpt-4o-mini", legacy_keys=["openai_model"])
+                github_token_opt = _get_opt_str("github.token", "", legacy_keys=["github_token"])
+                github_model_opt = _get_opt_str("github.model", "gpt-4o-mini", legacy_keys=["github_model"])
+                foundry_endpoint_opt = _get_opt_str("foundry.endpoint", "", legacy_keys=["foundry_endpoint"])
+                foundry_api_key_opt = _get_opt_str("foundry.api_key", "", legacy_keys=["foundry_api_key"])
+                foundry_bearer_token_opt = _get_opt_str("foundry.bearer_token", "", legacy_keys=["foundry_bearer_token"])
+                foundry_model_opt = _get_opt_str("foundry.model", "", legacy_keys=["foundry_model"])
+                foundry_agent_id_opt = _get_opt_str("foundry.agent_id", "", legacy_keys=["foundry_agent_id"])
 
                 # API auth token (Phase 7 Milestone B)
                 global _api_token
-                _api_token_opt = opts.get("api_token", "").strip()
+                _api_token_opt = _get_opt_str("security.api_token", "", legacy_keys=["api_token"])
                 if _api_token_opt:
                     _api_token = _api_token_opt
 

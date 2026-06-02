@@ -76,7 +76,7 @@ export const SettingsModal = ({ onClose, currentConfig, onUpdate }) => {
                         </div>
                     </div>
 
-                    {/* Gemini Settings */}
+                    {/* Dashboard AI Settings */}
                     <div className="bg-slate-800/30 rounded-lg p-4 border border-slate-700/50 space-y-4">
                         <div className="flex justify-between items-center">
                             <div className="flex items-center gap-2">
@@ -91,6 +91,9 @@ export const SettingsModal = ({ onClose, currentConfig, onUpdate }) => {
                                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${config.use_gemini_for_dashboard ? 'translate-x-6' : 'translate-x-1'}`} />
                             </button>
                         </div>
+                        <p className="text-[10px] text-slate-400 leading-relaxed">
+                            Dashboard generation uses your configured LLM provider by default. Enable this to override with Google Gemini (requires an API key below).
+                        </p>
 
                         <div className="space-y-3">
                             <div>
@@ -109,11 +112,11 @@ export const SettingsModal = ({ onClose, currentConfig, onUpdate }) => {
                                 <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1 block">Gemini Model</label>
                                 <input
                                     type="text"
-                                    defaultValue={config.gemini_model_name || "gemini-robotics-er-1.5-preview"}
+                                    defaultValue={config.gemini_model_name || "gemini-1.5-pro"}
                                     onBlur={(e) => updateConfigField('gemini_model_name', e.target.value)}
                                     className="bg-slate-950 border border-slate-800 rounded px-3 py-1.5 text-xs text-slate-300 w-full focus:outline-none focus:border-blue-500/50"
                                 />
-                                <p className="text-[10px] text-slate-500 mt-1">Recommended: gemini-robotics-er-1.5-preview for high-fidelity robotics/vis.</p>
+                                <p className="text-[10px] text-slate-500 mt-1">Recommended: gemini-1.5-pro or gemini-2.0-flash.</p>
                             </div>
                         </div>
                     </div>
